@@ -32,12 +32,14 @@ func (k Keeper) Channel(key sdk.KVStoreGetter) Channel {
 	}
 }
 
-func (c Channel) egressQueue(chainID string) lib.Linear {
-	return lib.NewLinear
+func (c Channel) egressQueue(store sdk.KVStore, chainID string) lib.Queue {
+	return lib.NewQueue(c.k.cdc, store.Prefix())
 }
 
 func (c Channel) Send(ctx sdk.Context, p Payload, dest string, cs sdk.CodespaceType) sdk.Error {
 	// TODO: Check validity of the payload; the module have to be permitted to send payload
+
+	store := c.key.KVStore(ctx)
 
 	packet := Packet{
 		Payload:   p,
@@ -45,7 +47,7 @@ func (c Channel) Send(ctx sdk.Context, p Payload, dest string, cs sdk.CodespaceT
 		DestChain: dest,
 	}
 
-	queue := c.egressQueue(ctx, dest)
+	queue := c.egressQueue(dest)
 	if queue == nil {
 		return ErrNoChannelOpened(cs, dest)
 	}
