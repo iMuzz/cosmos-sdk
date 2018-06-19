@@ -9,52 +9,81 @@ const (
 	DefaultCodespace sdk.CodespaceType = 3
 
 	// IBC errors reserve 200 - 299.
-	CodeInvalidSequence         sdk.CodeType = 200
-	CodeIdenticalChains         sdk.CodeType = 201
-	CodeChainMismatch           sdk.CodeType = 202
-	CodeNoChannelOpened         sdk.CodeType = 203
-	CodeChannelAlreadyOpened    sdk.CodeType = 204
-	CodeUpdateCommitFailed      sdk.CodeType = 205
-	CodeInvalidPacket           sdk.CodeType = 206
-	CodeNoCommitFound           sdk.CodeType = 207
-	CodeUnauthorizedSend        sdk.CodeType = 208
-	CodeUnauthorizedSendReceipt sdk.CodeType = 209
+	CodeConnectionNotEstablished     sdk.CodeType = 200
+	CodeConnectionAlreadyEstablished sdk.CodeType = 201
+	CodeChainMismatch                sdk.CodeType = 202
+	CodeChannelNotOpened             sdk.CodeType = 203
+	CodeChannelAlreadyOpened         sdk.CodeType = 204
+	CodeInvalidProof                 sdk.CodeType = 205
+	CodeInvalidPacket                sdk.CodeType = 206
 
+	/*
+
+		CodeIdenticalChains         sdk.CodeType = 201
+		CodeChainMismatch           sdk.CodeType = 202
+		CodeUpdateCommitFailed      sdk.CodeType = 205
+		CodeInvalidPacket           sdk.CodeType = 206
+		CodeNoCommitFound           sdk.CodeType = 207
+		CodeUnauthorizedSend        sdk.CodeType = 208
+		CodeUnauthorizedSendReceipt sdk.CodeType = 209
+	*/
 	CodeUnknownRequest sdk.CodeType = sdk.CodeUnknownRequest
 )
 
 func codeToDefaultMsg(code sdk.CodeType) string {
 	switch code {
-	case CodeInvalidSequence:
-		return "Invalid IBC packet sequence"
-	case CodeIdenticalChains:
-		return "Source and destination chain cannot be identical"
-	case CodeChainMismatch:
-		return "Destination chain is not current chain"
+	/*	case CodeInvalidSequence:
+			return "Invalid IBC packet sequence"
+		case CodeIdenticalChains:
+			return "Source and destination chain cannot be identical"
+		case CodeChainMismatch:
+			return "Destination chain is not current chain"*/
 	default:
 		return sdk.CodeToDefaultMsg(code)
 	}
 }
 
 // nolint
-func ErrInvalidSequence(codespace sdk.CodespaceType) sdk.Error {
-	return newError(codespace, CodeInvalidSequence, "")
+func ErrConnectionNotEstablished(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeConnectionNotEstablished, "")
 }
-func ErrIdenticalChains(codespace sdk.CodespaceType) sdk.Error {
-	return newError(codespace, CodeIdenticalChains, "")
+
+func ErrConnectionAlreadyEstablished(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeConnectionAlreadyEstablished, "")
+}
+
+func ErrChannelNotOpened(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeChannelNotOpened, "")
+}
+
+func ErrChannelAlreadyOpened(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeChannelAlreadyOpened, "")
 }
 
 func ErrChainMismatch(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeChainMismatch, "")
 }
 
-func ErrNoChannelOpened(codespace sdk.CodespaceType, srcChain string) sdk.Error {
-	return newError(codespace, CodeNoChannelOpened, srcChain)
+func ErrInvalidSequence(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeInvalidProof, "Invalid sequence")
 }
 
-func ErrChannelAlreadyOpened(codespace sdk.CodespaceType, srcChain string) sdk.Error {
-	return newError(codespace, CodeChannelAlreadyOpened, srcChain)
+func ErrInvalidHeight(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeInvalidPacket, "Invalid height")
 }
+
+/*
+
+
+// nolint
+
+func ErrIdenticalChains(codespace sdk.CodespaceType) sdk.Error {
+	return newError(codespace, CodeIdenticalChains, "")
+}
+
+
+
+
 
 func ErrUpdateCommitFailed(codespace sdk.CodespaceType, err error) sdk.Error {
 	return newError(codespace, CodeUpdateCommitFailed, err.Error())
@@ -75,7 +104,7 @@ func ErrUnauthorizedSend(codespace sdk.CodespaceType) sdk.Error {
 func ErrUnauthorizedSendReceipt(codespace sdk.CodespaceType) sdk.Error {
 	return newError(codespace, CodeUnauthorizedSendReceipt, "")
 }
-
+*/
 // -------------------------
 // Helpers
 

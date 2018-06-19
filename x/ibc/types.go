@@ -3,11 +3,9 @@ package ibc
 import (
 	"encoding/json"
 
-	"github.com/tendermint/iavl"
 	"github.com/tendermint/tendermint/lite"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/lib"
 )
 
 // TODO: lightclient verification
@@ -20,6 +18,7 @@ import (
 
 type ReceiveMsg struct {
 	Packet
+	Proof
 	Relayer sdk.Address
 }
 
@@ -39,17 +38,18 @@ func (msg ReceiveMsg) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Relayer}
 }
 
-func (msg ReceiveMsg) Verify(ctx sdk.Context, channel Channel) sdk.Error {
+func (msg ReceiveMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
 	chainID := msg.Packet.SrcChain
 
-	expected := channel.getReceiveSequence(ctx, chainID)
+	expected := egressQueue(store, c.k.cdc, chainID)
 	// TODO: unify int64/uint64
-	if proof.Sequence != uint64(expected) {
-		return ErrInvalidSequence(channel.keeper.codespace)
+	proof := msg.Proof
+	if proof.Sequence != uint64(expected.Len()) {
+		return ErrInvalidSequence(c.k.codespace)
 	}
-	channel.setReceiveSequence(ctx, chainID, int64(proof.Sequence+1))
+	c.setReceiveSequence(ctx, chainID, int64(proof.Sequence+1))
 
-	return proof.Verify(ctx, channel, msg.Packet)
+	return proof.Verify(ctx, c, msg.Packet)
 }
 
 // --------------------------------
@@ -76,16 +76,16 @@ func (msg ReceiptMsg) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Relayer}
 }
 
-func (msg ReceiptMsg) Verify(ctx sdk.Context, channel Channel) sdk.Error {
+func (msg ReceiptMsg) Verify(ctx sdk.Context, c Channel) sdk.Error {
 	chainID := msg.Packet.SrcChain
 
-	expected := channel.getReceiptSequence(ctx, chainID)
+	expected := c.getReceiptSequence(ctx, chainID)
 	if proof.Sequence != uint64(expected) {
-		return ErrInvalidSequence(channel.keeper.codespace)
+		return ErrInvalidSequence(c.k.codespace)
 	}
-	channel.setReceiptSequence(ctx, chainID, int64(proof.Sequence+1))
+	c.setReceiptSequence(ctx, chainID, int64(proof.Sequence+1))
 
-	return proof.Verify(ctx, channel, msg.Packet)
+	return proof.Verify(ctx, c, msg.Packet)
 }
 
 // --------------------------------
@@ -157,25 +157,25 @@ func (msg ReceiptCleanupMsg) ValidateBasic() sdk.Error {
 }
 
 //-------------------------------------
-// OpenChannelMsg
+// OpenConnectionMsg
 
-// OpenChannelMsg defines the message that is used for open a channel
+// OpenConnectionMsg defines the message that is used for open a c
 // that receives msg from another chain
-type OpenChannelMsg struct {
+type OpenConnectionMsg struct {
 	ROT      lite.FullCommit
-	SrcChain string
+	SrcChain []byte
 	Signer   sdk.Address
 }
 
-func (msg OpenChannelMsg) Type() string {
+func (msg OpenConnectionMsg) Type() string {
 	return "ibc"
 }
 
-func (msg OpenChannelMsg) Get(key interface{}) interface{} {
+func (msg OpenConnectionMsg) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg OpenChannelMsg) GetSignBytes() []byte {
+func (msg OpenConnectionMsg) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -183,33 +183,33 @@ func (msg OpenChannelMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg OpenChannelMsg) ValidateBasic() sdk.Error {
+func (msg OpenConnectionMsg) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg OpenChannelMsg) GetSigners() []sdk.Address {
+func (msg OpenConnectionMsg) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Signer}
 }
 
 //------------------------------------
-// UpdateChannelMsg
+// UpdateConnectionMsg
 
-type UpdateChannelMsg struct {
-	SrcChain string
+type UpdateConnectionMsg struct {
+	SrcChain []byte
 	Commit   lite.FullCommit
 	//PacketProof
 	Signer sdk.Address
 }
 
-func (msg UpdateChannelMsg) Type() string {
+func (msg UpdateConnectionMsg) Type() string {
 	return "ibc"
 }
 
-func (msg UpdateChannelMsg) Get(key interface{}) interface{} {
+func (msg UpdateConnectionMsg) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg UpdateChannelMsg) GetSignBytes() []byte {
+func (msg UpdateConnectionMsg) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -217,11 +217,11 @@ func (msg UpdateChannelMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg UpdateChannelMsg) ValidateBasic() sdk.Error {
+func (msg UpdateConnectionMsg) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg UpdateChannelMsg) GetSigners() []sdk.Address {
+func (msg UpdateConnectionMsg) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Signer}
 }
 
@@ -244,4 +244,13 @@ type Packet struct {
 	Payload
 	SrcChain  string
 	DestChain string
+}
+
+// ------------------------------
+// Proof
+
+type Proof struct {
+	// Proof merkle.Proof
+	Height   uint64
+	Sequence uint64
 }
