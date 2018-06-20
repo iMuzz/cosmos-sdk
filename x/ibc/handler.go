@@ -23,7 +23,8 @@ func NewHandler(k Keeper) sdk.Handler {
 }
 
 func handleOpenConnectionMsg(ctx sdk.Context, k Keeper, msg OpenConnectionMsg) sdk.Result {
-	if k.isConnectionEstablished(ctx, msg.SrcChain) {
+	store := ctx.KVStore(k.key)
+	if k.isConnectionEstablished(store, msg.SrcChain) {
 		return ErrConnectionAlreadyEstablished(k.codespace).Result()
 	}
 
@@ -31,18 +32,19 @@ func handleOpenConnectionMsg(ctx sdk.Context, k Keeper, msg OpenConnectionMsg) s
 	if height < 0 {
 		return ErrInvalidHeight(k.codespace).Result()
 	}
-	k.setCommit(ctx, msg.SrcChain, uint64(msg.ROT.Height()), msg.ROT)
+	k.setCommit(store, msg.SrcChain, uint64(msg.ROT.Height()), msg.ROT)
 
 	return sdk.Result{}
 }
 
 func handleUpdateConnectionMsg(ctx sdk.Context, k Keeper, msg UpdateConnectionMsg) sdk.Result {
-	lastheight, ok := k.getLastCommitHeight(ctx, msg.SrcChain)
+	store := ctx.KVStore(k.key)
+	lastheight, ok := k.getLastCommitHeight(store, msg.SrcChain)
 	if !ok {
 		return ErrConnectionNotEstablished(k.codespace).Result()
 	}
 
-	_ /*lastcommit*/, ok = k.getCommit(ctx, msg.SrcChain, lastheight)
+	_ /*lastcommit*/, ok = k.getCommit(store, msg.SrcChain, lastheight)
 	if !ok {
 		panic("Last commit not found")
 	}
@@ -59,8 +61,27 @@ func handleUpdateConnectionMsg(ctx sdk.Context, k Keeper, msg UpdateConnectionMs
 	if height < 0 {
 		return ErrInvalidHeight(k.codespace).Result()
 	}
-	k.setCommit(ctx, msg.SrcChain, uint64(height), msg.Commit)
+	k.setCommit(store, msg.SrcChain, uint64(height), msg.Commit)
 	return sdk.Result{}
+}
+
+// ----------------------------
+
+func (c Channel) Send(ctx sdk.Context, p Payload, dest string, cs sdk.CodespaceType) sdk.Error {
+	// TODO: Check validity of the payload; the module have to be permitted to send payload
+
+	store := c.key.KVStore(ctx)
+
+	packet := Packet{
+		Payload:   p,
+		SrcChain:  ctx.ChainID(),
+		DestChain: dest,
+	}
+
+	queue := egressQueue(store, c.k.cdc, dest)
+	queue.Push(packet)
+
+	return nil
 }
 
 type ReceiveHandler func(sdk.Context, Payload) (Payload, sdk.Error)
@@ -104,9 +125,11 @@ func (c Channel) Receive(h ReceiveHandler, ctx sdk.Context, msg ReceiveMsg) sdk.
 type ReceiptHandler func(sdk.Context, Payload)
 
 func (c Channel) Receipt(h ReceiptHandler, ctx sdk.Context, msg ReceiptMsg) sdk.Result {
-	if err := msg.Verify(ctx, c); err != nil {
+	store := ctx.KVStore(c.k.key)
+	if err := msg.Verify(store, c); err != nil {
 		return err.Result()
 	}
+	setReceiptSequence(store, c.k.cdc, msg.Packet.SrcChain, msg.Proof.Sequence)
 
 	h(ctx, msg.Payload)
 
@@ -114,7 +137,7 @@ func (c Channel) Receipt(h ReceiptHandler, ctx sdk.Context, msg ReceiptMsg) sdk.
 }
 
 func handleReceiveCleanupMsg(ctx sdk.Context, c Channel, msg ReceiveCleanupMsg) sdk.Result {
-	queue := egressQueue(ctx.KVStore(c.k.key), c.k.cdc, msg.SrcChain)
+	_ = egressQueue(ctx.KVStore(c.k.key), c.k.cdc, msg.SrcChain)
 	/*
 		if err := msg.Verify(ctx, queue, msg.SrcChain, msg.Sequence); err != nil {
 			return err.Result()
@@ -126,7 +149,7 @@ func handleReceiveCleanupMsg(ctx sdk.Context, c Channel, msg ReceiveCleanupMsg) 
 }
 
 func handleReceiptCleanupMsg(ctx sdk.Context, c Channel, msg ReceiptCleanupMsg) sdk.Result {
-	queue := receiptQueue(ctx.KVStore(c.k.key), c.k.cdc, msg.SrcChain)
+	_ = receiptQueue(ctx.KVStore(c.k.key), c.k.cdc, msg.SrcChain)
 	/*
 		if err := msg.Verify(ctx, queue, msg.SrcChain, msg.Sequence); err != nil {
 			return err.Result()

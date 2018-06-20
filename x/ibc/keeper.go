@@ -39,8 +39,7 @@ func commitByHeight(store sdk.KVStore, cdc *wire.Codec, chainID []byte) lib.List
 	return lib.NewList(cdc, store.Prefix(GetCommitByHeightPrefix(chainID)))
 }
 
-func (k Keeper) getLastCommitHeight(ctx sdk.Context, srcChain []byte) (res uint64, ok bool) {
-	store := ctx.KVStore(k.key)
+func (k Keeper) getLastCommitHeight(store sdk.KVStore, srcChain []byte) (res uint64, ok bool) {
 	bz := store.Get(GetLastCommitHeightKey(srcChain))
 	if bz == nil {
 		return res, false
@@ -49,8 +48,7 @@ func (k Keeper) getLastCommitHeight(ctx sdk.Context, srcChain []byte) (res uint6
 	return res, true
 }
 
-func (k Keeper) getCommit(ctx sdk.Context, srcChain []byte, height uint64) (res lite.FullCommit, ok bool) {
-	store := ctx.KVStore(k.key)
+func (k Keeper) getCommit(store sdk.KVStore, srcChain []byte, height uint64) (res lite.FullCommit, ok bool) {
 	commits := commitByHeight(store, k.cdc, srcChain)
 	if err := commits.Get(height, &res); err != nil {
 		return res, false
@@ -58,15 +56,13 @@ func (k Keeper) getCommit(ctx sdk.Context, srcChain []byte, height uint64) (res 
 	return res, true
 }
 
-func (k Keeper) setCommit(ctx sdk.Context, srcChain []byte, height uint64, commit lite.FullCommit) {
-	store := ctx.KVStore(k.key)
+func (k Keeper) setCommit(store sdk.KVStore, srcChain []byte, height uint64, commit lite.FullCommit) {
 	commitByHeight(store, k.cdc, srcChain).Set(height, commit)
 	store.Set(GetLastCommitHeightKey(srcChain), k.cdc.MustMarshalBinary(height))
 }
 
-func (k Keeper) isConnectionEstablished(ctx sdk.Context, srcChain []byte) bool {
-	store := ctx.KVStore(k.key)
-	_, ok := k.getLastCommitHeight(ctx, srcChain)
+func (k Keeper) isConnectionEstablished(store sdk.KVStore, srcChain []byte) bool {
+	_, ok := k.getLastCommitHeight(store, srcChain)
 	return ok
 }
 
@@ -83,19 +79,24 @@ func (k Keeper) Channel(key sdk.KVStoreGetter) Channel {
 	}
 }
 
-// GetEgressQueuePrefix :: lib.Linear
-func GetEgressQueuePrefix(destChain []byte) []byte {
-	return []byte{0x00}
+// GetEgressQueuePrefix :: string -> lib.Linear
+func GetEgressQueuePrefix(destChain string) []byte {
+	return append([]byte{0x00}, []byte(destChain)...)
 }
 
-// GetReceiptQueuePrefix :: lib.Linear
-func GetReceiptQueuePrefix(destChain []byte) []byte {
-	return []byte{0x01}
+// GetReceiptQueuePrefix :: string -> lib.Linear
+func GetReceiptQueuePrefix(destChain string) []byte {
+	return append([]byte{0x01}, []byte(destChain)...)
 }
 
-// GetReceivingSequenceKey :: uint64
-func GetReceivingSequenceKey(srcChain []byte) []byte {
-	return []byte{0x02}
+// GetReceivingSequenceKey :: string -> uint64
+func GetReceivingSequenceKey(srcChain string) []byte {
+	return append([]byte{0x02}, []byte(srcChain)...)
+}
+
+// GetReceiptSequenceKey :: uint64
+func GetReceiptSequenceKey(srcChain string) []byte {
+	return append([]byte{0x03}, []byte(srcChain)...)
 }
 
 func egressQueue(store sdk.KVStore, cdc *wire.Codec, chainID string) lib.Linear {
@@ -106,22 +107,28 @@ func receiptQueue(store sdk.KVStore, cdc *wire.Codec, chainID string) lib.Linear
 	return lib.NewLinear(cdc, store.Prefix([]byte{0x01}))
 }
 
-func (c Channel) Send(ctx sdk.Context, p Payload, dest string, cs sdk.CodespaceType) sdk.Error {
-	// TODO: Check validity of the payload; the module have to be permitted to send payload
-
-	store := c.key.KVStore(ctx)
-
-	packet := Packet{
-		Payload:   p,
-		SrcChain:  ctx.ChainID(),
-		DestChain: dest,
+func getReceivingSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (res uint64) {
+	bz := store.Get(GetReceivingSequenceKey(srcChain))
+	if bz == nil {
+		return 0
 	}
+	cdc.MustUnmarshalBinary(bz, &res)
+	return
+}
 
-	queue := egressQueue(store, c.k.cdc, dest)
-	if queue == nil {
-		return ErrChannelNotOpened(c.k.codespace)
+func setRecivingSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string, seq uint64) {
+	store.Set(GetReceivingSequenceKey(srcChain), cdc.MustMarshalBinary(seq))
+}
+
+func getReceiptSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (res uint64) {
+	bz := store.Get(GetReceiptSequenceKey(srcChain))
+	if bz == nil {
+		return 0
 	}
-	queue.Push(packet)
+	cdc.MustUnmarshalBinary(bz, &res)
+	return
+}
 
-	return nil
+func setReceiptSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string, seq uint64) {
+	store.Set(GetReceiptSequenceKey(srcChain), cdc.MustMarshalBinary(seq))
 }

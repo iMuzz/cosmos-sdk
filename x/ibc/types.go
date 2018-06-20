@@ -47,9 +47,8 @@ func (msg ReceiveMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
 	if proof.Sequence != uint64(expected.Len()) {
 		return ErrInvalidSequence(c.k.codespace)
 	}
-	c.setReceiveSequence(ctx, chainID, int64(proof.Sequence+1))
 
-	return proof.Verify(ctx, c, msg.Packet)
+	return proof.Verify(store, msg.Packet)
 }
 
 // --------------------------------
@@ -57,6 +56,7 @@ func (msg ReceiveMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
 
 type ReceiptMsg struct {
 	Packet
+	Proof
 	Relayer sdk.Address
 }
 
@@ -76,16 +76,16 @@ func (msg ReceiptMsg) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Relayer}
 }
 
-func (msg ReceiptMsg) Verify(ctx sdk.Context, c Channel) sdk.Error {
+func (msg ReceiptMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
 	chainID := msg.Packet.SrcChain
 
-	expected := c.getReceiptSequence(ctx, chainID)
+	expected := getReceiptSequence(store, c.k.cdc, chainID)
+	proof := msg.Proof
 	if proof.Sequence != uint64(expected) {
 		return ErrInvalidSequence(c.k.codespace)
 	}
-	c.setReceiptSequence(ctx, chainID, int64(proof.Sequence+1))
 
-	return proof.Verify(ctx, c, msg.Packet)
+	return proof.Verify(store, msg.Packet)
 }
 
 // --------------------------------
@@ -253,4 +253,9 @@ type Proof struct {
 	// Proof merkle.Proof
 	Height   uint64
 	Sequence uint64
+}
+
+func (prf Proof) Verify(store sdk.KVStore, p Packet) sdk.Error {
+	// TODO: implement
+	return nil
 }
