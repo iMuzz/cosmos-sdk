@@ -13,11 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank/client"
 )
 
-const (
-	flagTo     = "to"
-	flagAmount = "amount"
-)
-
 // SendTxCommand will create a send tx and sign it with the given key
 func SendTxCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
@@ -32,14 +27,14 @@ func SendTxCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			toStr := viper.GetString(flagTo)
+			toStr := viper.GetString(FlagTo)
 
 			to, err := sdk.GetAccAddressBech32(toStr)
 			if err != nil {
 				return err
 			}
 			// parse coins
-			amount := viper.GetString(flagAmount)
+			amount := viper.GetString(FlagAmount)
 			coins, err := sdk.ParseCoins(amount)
 			if err != nil {
 				return err
@@ -56,7 +51,7 @@ func SendTxCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagTo, "", "Address to send coins")
-	cmd.Flags().String(flagAmount, "", "Amount of coins to send")
+	cmd.Flags().String(FlagTo, "", "Address to send coins")
+	cmd.Flags().String(FlagAmount, "", "Amount of coins to send")
 	return cmd
 }
