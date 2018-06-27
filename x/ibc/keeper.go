@@ -36,7 +36,7 @@ func GetCommitByHeightPrefix(srcChain []byte) []byte {
 }
 
 func commitByHeight(store sdk.KVStore, cdc *wire.Codec, chainID []byte) lib.List {
-	return lib.NewList(cdc, store.Prefix(GetCommitByHeightPrefix(chainID)))
+	return lib.NewList(cdc, store.Prefix(GetCommitByHeightPrefix(chainID)), nil)
 }
 
 func (k Keeper) getLastCommitHeight(store sdk.KVStore, srcChain []byte) (res uint64, ok bool) {
@@ -100,11 +100,11 @@ func GetReceiptSequenceKey(srcChain string) []byte {
 }
 
 func egressQueue(store sdk.KVStore, cdc *wire.Codec, chainID string) lib.Linear {
-	return lib.NewLinear(cdc, store.Prefix([]byte{0x00}))
+	return lib.NewLinear(cdc, store.Prefix([]byte{0x00}), nil)
 }
 
 func receiptQueue(store sdk.KVStore, cdc *wire.Codec, chainID string) lib.Linear {
-	return lib.NewLinear(cdc, store.Prefix([]byte{0x01}))
+	return lib.NewLinear(cdc, store.Prefix([]byte{0x01}), nil)
 }
 
 func getReceivingSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (res uint64) {

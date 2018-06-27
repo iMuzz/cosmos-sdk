@@ -50,13 +50,6 @@ func NewLinear(cdc *wire.Codec, store sdk.KVStore, keys *LinearKeys) Linear {
 	}
 }
 
-func NewLinear(cdc *wire.Codec, store sdk.KVStore) Linear {
-	return Linear{
-		cdc:   cdc,
-		store: store,
-	}
-}
-
 // List is a Linear interface that provides list-like functions
 // It panics when the element type cannot be (un/)marshalled by the codec
 type List interface {
