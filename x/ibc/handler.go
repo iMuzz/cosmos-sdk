@@ -11,10 +11,10 @@ import (
 func NewHandler(k Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
-		case OpenConnectionMsg:
-			return handleOpenConnectionMsg(ctx, k, msg)
-		case UpdateConnectionMsg:
-			return handleUpdateConnectionMsg(ctx, k, msg)
+		case MsgOpenConnection:
+			return handleMsgOpenConnection(ctx, k, msg)
+		case MsgUpdateConnection:
+			return handleMsgUpdateConnection(ctx, k, msg)
 		default:
 			errMsg := "Unrecognized IBC Msg type: " + reflect.TypeOf(msg).Name()
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -22,7 +22,7 @@ func NewHandler(k Keeper) sdk.Handler {
 	}
 }
 
-func handleOpenConnectionMsg(ctx sdk.Context, k Keeper, msg OpenConnectionMsg) sdk.Result {
+func handleMsgOpenConnection(ctx sdk.Context, k Keeper, msg MsgOpenConnection) sdk.Result {
 	store := ctx.KVStore(k.key)
 	if k.isConnectionEstablished(store, msg.SrcChain) {
 		return ErrConnectionAlreadyEstablished(k.codespace).Result()
@@ -37,7 +37,7 @@ func handleOpenConnectionMsg(ctx sdk.Context, k Keeper, msg OpenConnectionMsg) s
 	return sdk.Result{}
 }
 
-func handleUpdateConnectionMsg(ctx sdk.Context, k Keeper, msg UpdateConnectionMsg) sdk.Result {
+func handleMsgUpdateConnection(ctx sdk.Context, k Keeper, msg MsgUpdateConnection) sdk.Result {
 	store := ctx.KVStore(k.key)
 	lastheight, ok := k.getLastCommitHeight(store, msg.SrcChain)
 	if !ok {
@@ -86,7 +86,7 @@ func (c Channel) Send(ctx sdk.Context, p Payload, dest string, cs sdk.CodespaceT
 
 type ReceiveHandler func(sdk.Context, Payload) (Payload, sdk.Error)
 
-func (c Channel) Receive(h ReceiveHandler, ctx sdk.Context, msg ReceiveMsg) sdk.Result {
+func (c Channel) Receive(h ReceiveHandler, ctx sdk.Context, msg MsgReceive) sdk.Result {
 	store := ctx.KVStore(c.k.key)
 	if err := msg.Verify(store, c); err != nil {
 		return err.Result()
@@ -124,7 +124,7 @@ func (c Channel) Receive(h ReceiveHandler, ctx sdk.Context, msg ReceiveMsg) sdk.
 
 type ReceiptHandler func(sdk.Context, Payload)
 
-func (c Channel) Receipt(h ReceiptHandler, ctx sdk.Context, msg ReceiptMsg) sdk.Result {
+func (c Channel) Receipt(h ReceiptHandler, ctx sdk.Context, msg MsgReceipt) sdk.Result {
 	store := ctx.KVStore(c.k.key)
 	if err := msg.Verify(store, c); err != nil {
 		return err.Result()
@@ -136,7 +136,7 @@ func (c Channel) Receipt(h ReceiptHandler, ctx sdk.Context, msg ReceiptMsg) sdk.
 	return sdk.Result{}
 }
 
-func handleReceiveCleanupMsg(ctx sdk.Context, c Channel, msg ReceiveCleanupMsg) sdk.Result {
+func handleMsgReceiveCleanup(ctx sdk.Context, c Channel, msg MsgReceiveCleanup) sdk.Result {
 	_ = egressQueue(ctx.KVStore(c.k.key), c.k.cdc, msg.SrcChain)
 	/*
 		if err := msg.Verify(ctx, queue, msg.SrcChain, msg.Sequence); err != nil {
@@ -148,7 +148,7 @@ func handleReceiveCleanupMsg(ctx sdk.Context, c Channel, msg ReceiveCleanupMsg) 
 	return sdk.Result{}
 }
 
-func handleReceiptCleanupMsg(ctx sdk.Context, c Channel, msg ReceiptCleanupMsg) sdk.Result {
+func handleMsgReceiptCleanup(ctx sdk.Context, c Channel, msg MsgReceiptCleanup) sdk.Result {
 	_ = receiptQueue(ctx.KVStore(c.k.key), c.k.cdc, msg.SrcChain)
 	/*
 		if err := msg.Verify(ctx, queue, msg.SrcChain, msg.Sequence); err != nil {

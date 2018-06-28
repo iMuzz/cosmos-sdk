@@ -15,8 +15,8 @@ import (
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/cosmos/cosmos-sdk/wire"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 var testCodespace = sdk.CodespaceUndefined
@@ -30,7 +30,7 @@ func defaultContext(keys ...sdk.StoreKey) sdk.Context {
 		cms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
 	}
 	cms.LoadLatestVersion()
-	ctx := sdk.NewContext(cms, abci.Header{}, false, nil, log.NewNopLogger())
+	ctx := sdk.NewContext(cms, abci.Header{}, false, log.NewNopLogger())
 	return ctx
 }
 
@@ -94,7 +94,7 @@ func makeCodec() *wire.Codec {
 	// Register Msgs
 	cdc.RegisterInterface((*sdk.Msg)(nil), nil)
 	cdc.RegisterConcrete(remoteSaveMsg{}, "test/remote/remoteSave", nil)
-	cdc.RegisterConcrete(ReceiveMsg{}, "test/ibc/Receive", nil)
+	cdc.RegisterConcrete(MsgReceive{}, "test/ibc/Receive", nil)
 
 	// Register Payloads
 	cdc.RegisterInterface((*Payload)(nil), nil)
@@ -131,7 +131,7 @@ func remoteSaveHandler(key sdk.StoreKey, ibck Keeper) sdk.Handler {
 		switch msg := msg.(type) {
 		case remoteSaveMsg:
 			return handleRemoteSaveMsg(ctx, ibcc, msg)
-		case ReceiveMsg:
+		case MsgReceive:
 			return ibcc.Receive(func(ctx sdk.Context, p Payload) (Payload, sdk.Error) {
 				switch p := p.(type) {
 				case remoteSavePayload:
@@ -140,7 +140,7 @@ func remoteSaveHandler(key sdk.StoreKey, ibck Keeper) sdk.Handler {
 					return nil, sdk.ErrUnknownRequest("")
 				}
 			}, ctx, msg)
-		case ReceiptMsg:
+		case MsgReceipt:
 			return ibcc.Receipt(func(ctx sdk.Context, p Payload) {
 				switch p := p.(type) {
 				case remoteSaveFailPayload:
@@ -195,7 +195,7 @@ func TestIBC(t *testing.T) {
 		destChain: chainid,
 	}
 
-	tx := sdk.NewStdTx(saveMsg, sdk.NewStdFee(0), []sdk.StdSignature{})
+	tx := auth.NewStdTx([]sdk.Msg{saveMsg}, auth.NewStdFee(0), []auth.StdSignature{}, "")
 
 	var res sdk.Result
 
@@ -209,15 +209,15 @@ func TestIBC(t *testing.T) {
 		DestChain: chainid,
 	}
 
-	receiveMsg := ReceiveMsg{
+	receiveMsg := MsgReceive{
 		Packet: packet,
-		PacketProof: PacketProof{
+		/*	PacketProof: PacketProof{
 			Sequence: 0,
-		},
+		},*/
 		Relayer: newAddress(),
 	}
 
-	tx.Msg = receiveMsg
+	tx.Msgs[0] = receiveMsg
 
 	res = app.Deliver(tx)
 	assert.True(t, res.IsOK())
@@ -227,69 +227,69 @@ func TestIBC(t *testing.T) {
 		assert.Equal(t, payload.value, val)
 	*/
 
-	tx.Msg = receiveMsg
+	tx.Msgs[0] = receiveMsg
 	res = app.Deliver(tx)
 	assert.False(t, res.IsOK())
 
 	// Send another IBC message and receive it
 	// It has duplicated key bytes so fails
-	tx.Msg = saveMsg
+	tx.Msgs[0] = saveMsg
 	res = app.Deliver(tx)
 	assert.True(t, res.IsOK())
 
-	receiveMsg = ReceiveMsg{
+	receiveMsg = MsgReceive{
 		Packet: packet,
-		PacketProof: PacketProof{
+		/*PacketProof: PacketProof{
 			Sequence: 1,
-		},
+		},*/
 		Relayer: newAddress(),
 	}
 
-	tx.Msg = receiveMsg
+	tx.Msgs[0] = receiveMsg
 	res = app.Deliver(tx)
 	assert.True(t, res.IsOK())
 
 	// Return fail receipt
 	packet.Payload = remoteSaveFailPayload{payload}
 
-	receiptMsg := ReceiptMsg{
+	receiptMsg := MsgReceipt{
 		Packet: packet,
-		PacketProof: PacketProof{
+		/*PacketProof: PacketProof{
 			Sequence: 0,
-		},
+		},*/
 		Relayer: newAddress(),
 	}
 
-	tx.Msg = receiptMsg
+	tx.Msgs[0] = receiptMsg
 	res = app.Deliver(tx)
 	assert.True(t, res.IsOK())
 
 	// Cleanup receive queue
-	receiveCleanupMsg := ReceiveCleanupMsg{
-		Sequence:     2,
-		SrcChain:     chainid,
-		CleanupProof: CleanupProof{},
-		Cleaner:      newAddress(),
+	receiveCleanupMsg := MsgReceiveCleanup{
+		Sequence: 2,
+		SrcChain: chainid,
+		//CleanupProof: CleanupProof{},
+		Cleaner: newAddress(),
 	}
 
-	tx.Msg = receiveCleanupMsg
+	tx.Msgs[0] = receiveCleanupMsg
 	res = app.Deliver(tx)
 	assert.True(t, res.IsOK())
 
 	// Cleanup receipt queue
-	receiptCleanupMsg := ReceiptCleanupMsg{
-		Sequence:     1,
-		SrcChain:     chainid,
-		CleanupProof: CleanupProof{},
-		Cleaner:      newAddress(),
+	receiptCleanupMsg := MsgReceiptCleanup{
+		Sequence: 1,
+		SrcChain: chainid,
+		//CleanupProof: CleanupProof{},
+		Cleaner: newAddress(),
 	}
 
-	tx.Msg = receiptCleanupMsg
+	tx.Msgs[0] = receiptCleanupMsg
 	res = app.Deliver(tx)
 	assert.True(t, res.IsOK())
 
 	unknownMsg := sdk.NewTestMsg(newAddress())
-	tx.Msg = unknownMsg
+	tx.Msgs[0] = unknownMsg
 	res = app.Deliver(tx)
 	assert.False(t, res.IsOK())
 }

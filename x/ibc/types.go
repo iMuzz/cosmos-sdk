@@ -11,22 +11,22 @@ import (
 // TODO: lightclient verification
 
 // ---------------------------------
-// ReceiveMsg
+// MsgReceive
 
-// ReceiveMsg defines the message that a relayer uses to post a packet
+// MsgReceive defines the message that a relayer uses to post a packet
 // to the destination chain.
 
-type ReceiveMsg struct {
+type MsgReceive struct {
 	Packet
 	Proof
 	Relayer sdk.Address
 }
 
-func (msg ReceiveMsg) Get(key interface{}) interface{} {
+func (msg MsgReceive) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg ReceiveMsg) GetSignBytes() []byte {
+func (msg MsgReceive) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -34,11 +34,11 @@ func (msg ReceiveMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg ReceiveMsg) GetSigners() []sdk.Address {
+func (msg MsgReceive) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Relayer}
 }
 
-func (msg ReceiveMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
+func (msg MsgReceive) Verify(store sdk.KVStore, c Channel) sdk.Error {
 	chainID := msg.Packet.SrcChain
 
 	expected := egressQueue(store, c.k.cdc, chainID)
@@ -52,19 +52,19 @@ func (msg ReceiveMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
 }
 
 // --------------------------------
-// ReceiptMsg
+// MsgReceipt
 
-type ReceiptMsg struct {
+type MsgReceipt struct {
 	Packet
 	Proof
 	Relayer sdk.Address
 }
 
-func (msg ReceiptMsg) Get(key interface{}) interface{} {
+func (msg MsgReceipt) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg ReceiptMsg) GetSignBytes() []byte {
+func (msg MsgReceipt) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -72,11 +72,11 @@ func (msg ReceiptMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg ReceiptMsg) GetSigners() []sdk.Address {
+func (msg MsgReceipt) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Relayer}
 }
 
-func (msg ReceiptMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
+func (msg MsgReceipt) Verify(store sdk.KVStore, c Channel) sdk.Error {
 	chainID := msg.Packet.SrcChain
 
 	expected := getIngressReceiptSequence(store, c.k.cdc, chainID)
@@ -89,20 +89,20 @@ func (msg ReceiptMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
 }
 
 // --------------------------------
-// ReceiveCleanupMsg
+// MsgReceiveCleanup
 
-type ReceiveCleanupMsg struct {
+type MsgReceiveCleanup struct {
 	ChannelName string
 	Sequence    int64
 	SrcChain    string
 	Cleaner     sdk.Address
 }
 
-func (msg ReceiveCleanupMsg) Get(key interface{}) interface{} {
+func (msg MsgReceiveCleanup) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg ReceiveCleanupMsg) GetSignBytes() []byte {
+func (msg MsgReceiveCleanup) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -110,33 +110,33 @@ func (msg ReceiveCleanupMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg ReceiveCleanupMsg) GetSigners() []sdk.Address {
+func (msg MsgReceiveCleanup) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Cleaner}
 }
 
-func (msg ReceiveCleanupMsg) Type() string {
+func (msg MsgReceiveCleanup) Type() string {
 	return "ibc"
 }
 
-func (msg ReceiveCleanupMsg) ValidateBasic() sdk.Error {
+func (msg MsgReceiveCleanup) ValidateBasic() sdk.Error {
 	return nil
 }
 
 // --------------------------------
-// ReceiptCleanupMsg
+// MsgReceiptCleanup
 
-type ReceiptCleanupMsg struct {
+type MsgReceiptCleanup struct {
 	ChannelName string
 	Sequence    int64
 	SrcChain    string
 	Cleaner     sdk.Address
 }
 
-func (msg ReceiptCleanupMsg) Get(key interface{}) interface{} {
+func (msg MsgReceiptCleanup) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg ReceiptCleanupMsg) GetSignBytes() []byte {
+func (msg MsgReceiptCleanup) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -144,38 +144,38 @@ func (msg ReceiptCleanupMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg ReceiptCleanupMsg) GetSigners() []sdk.Address {
+func (msg MsgReceiptCleanup) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Cleaner}
 }
 
-func (msg ReceiptCleanupMsg) Type() string {
+func (msg MsgReceiptCleanup) Type() string {
 	return "ibc"
 }
 
-func (msg ReceiptCleanupMsg) ValidateBasic() sdk.Error {
+func (msg MsgReceiptCleanup) ValidateBasic() sdk.Error {
 	return nil
 }
 
 //-------------------------------------
-// OpenConnectionMsg
+// MsgOpenConnection
 
-// OpenConnectionMsg defines the message that is used for open a c
+// MsgOpenConnection defines the message that is used for open a c
 // that receives msg from another chain
-type OpenConnectionMsg struct {
+type MsgOpenConnection struct {
 	ROT      lite.FullCommit
 	SrcChain []byte
 	Signer   sdk.Address
 }
 
-func (msg OpenConnectionMsg) Type() string {
+func (msg MsgOpenConnection) Type() string {
 	return "ibc"
 }
 
-func (msg OpenConnectionMsg) Get(key interface{}) interface{} {
+func (msg MsgOpenConnection) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg OpenConnectionMsg) GetSignBytes() []byte {
+func (msg MsgOpenConnection) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -183,33 +183,33 @@ func (msg OpenConnectionMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg OpenConnectionMsg) ValidateBasic() sdk.Error {
+func (msg MsgOpenConnection) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg OpenConnectionMsg) GetSigners() []sdk.Address {
+func (msg MsgOpenConnection) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Signer}
 }
 
 //------------------------------------
-// UpdateConnectionMsg
+// MsgUpdateConnection
 
-type UpdateConnectionMsg struct {
+type MsgUpdateConnection struct {
 	SrcChain []byte
 	Commit   lite.FullCommit
 	//PacketProof
 	Signer sdk.Address
 }
 
-func (msg UpdateConnectionMsg) Type() string {
+func (msg MsgUpdateConnection) Type() string {
 	return "ibc"
 }
 
-func (msg UpdateConnectionMsg) Get(key interface{}) interface{} {
+func (msg MsgUpdateConnection) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (msg UpdateConnectionMsg) GetSignBytes() []byte {
+func (msg MsgUpdateConnection) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -217,11 +217,11 @@ func (msg UpdateConnectionMsg) GetSignBytes() []byte {
 	return bz
 }
 
-func (msg UpdateConnectionMsg) ValidateBasic() sdk.Error {
+func (msg MsgUpdateConnection) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg UpdateConnectionMsg) GetSigners() []sdk.Address {
+func (msg MsgUpdateConnection) GetSigners() []sdk.Address {
 	return []sdk.Address{msg.Signer}
 }
 

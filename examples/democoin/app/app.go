@@ -106,6 +106,7 @@ func MakeCodec() *wire.Codec {
 	sdk.RegisterWire(cdc)    // Register Msgs
 	cool.RegisterWire(cdc)
 	pow.RegisterWire(cdc)
+	ibc.RegisterWire(cdc)
 	bank.RegisterWire(cdc)
 	simplestake.RegisterWire(cdc)
 

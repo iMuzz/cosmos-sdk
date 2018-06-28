@@ -108,6 +108,7 @@ func NewGaiaApp(logger log.Logger, db dbm.DB) *GaiaApp {
 // custom tx codec
 func MakeCodec() *wire.Codec {
 	var cdc = wire.NewCodec()
+	ibc.RegisterWire(cdc)
 	bank.RegisterWire(cdc)
 	stake.RegisterWire(cdc)
 	slashing.RegisterWire(cdc)
