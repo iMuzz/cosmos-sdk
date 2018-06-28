@@ -130,7 +130,7 @@ func (c relayCommander) loop(egressQueue lib.LinearClient, srcChainID, chainID, 
 			}
 
 			// TODO: add proof
-			msg := ibc.ReceiveMsg{Packet: packet, Relayer: c.address}
+			msg := ibc.MsgReceive{Packet: packet, Relayer: c.address}
 			res, err := ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, c.cdc)
 			if err != nil {
 				panic(err)

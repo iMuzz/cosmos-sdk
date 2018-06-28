@@ -100,7 +100,9 @@ func (cli linearClient) Iterate(ptr interface{}, fn func(uint64) bool) {
 
 	var i uint64
 	for i = top; i < length; i++ {
-		cli.Get(i, ptr)
+		if cli.Get(i, ptr) != nil {
+			continue
+		}
 		if fn(i) {
 			break
 		}
