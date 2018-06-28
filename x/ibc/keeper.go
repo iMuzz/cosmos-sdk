@@ -84,18 +84,18 @@ func GetEgressQueuePrefix(destChain string) []byte {
 	return append([]byte{0x00}, []byte(destChain)...)
 }
 
-// GetReceiptQueuePrefix :: string -> lib.Linear
-func GetReceiptQueuePrefix(destChain string) []byte {
+// GetEgressReceiptQueuePrefix :: string -> lib.Linear
+func GetEgressReceiptQueuePrefix(destChain string) []byte {
 	return append([]byte{0x01}, []byte(destChain)...)
 }
 
-// GetReceivingSequenceKey :: string -> uint64
-func GetReceivingSequenceKey(srcChain string) []byte {
+// GetIngressSequenceKey :: string -> uint64
+func GetIngressSequenceKey(srcChain string) []byte {
 	return append([]byte{0x02}, []byte(srcChain)...)
 }
 
-// GetReceiptSequenceKey :: uint64
-func GetReceiptSequenceKey(srcChain string) []byte {
+// GetIngressReceiptSequenceKey :: uint64
+func GetIngressReceiptSequenceKey(srcChain string) []byte {
 	return append([]byte{0x03}, []byte(srcChain)...)
 }
 
@@ -107,8 +107,8 @@ func receiptQueue(store sdk.KVStore, cdc *wire.Codec, chainID string) lib.Linear
 	return lib.NewLinear(cdc, store.Prefix([]byte{0x01}), nil)
 }
 
-func getReceivingSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (res uint64) {
-	bz := store.Get(GetReceivingSequenceKey(srcChain))
+func getIngressSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (res uint64) {
+	bz := store.Get(GetIngressSequenceKey(srcChain))
 	if bz == nil {
 		return 0
 	}
@@ -117,11 +117,11 @@ func getReceivingSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (
 }
 
 func setRecivingSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string, seq uint64) {
-	store.Set(GetReceivingSequenceKey(srcChain), cdc.MustMarshalBinary(seq))
+	store.Set(GetIngressSequenceKey(srcChain), cdc.MustMarshalBinary(seq))
 }
 
-func getReceiptSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (res uint64) {
-	bz := store.Get(GetReceiptSequenceKey(srcChain))
+func getIngressReceiptSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (res uint64) {
+	bz := store.Get(GetIngressReceiptSequenceKey(srcChain))
 	if bz == nil {
 		return 0
 	}
@@ -129,6 +129,6 @@ func getReceiptSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string) (re
 	return
 }
 
-func setReceiptSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string, seq uint64) {
-	store.Set(GetReceiptSequenceKey(srcChain), cdc.MustMarshalBinary(seq))
+func setIngressReceiptSequence(store sdk.KVStore, cdc *wire.Codec, srcChain string, seq uint64) {
+	store.Set(GetIngressReceiptSequenceKey(srcChain), cdc.MustMarshalBinary(seq))
 }

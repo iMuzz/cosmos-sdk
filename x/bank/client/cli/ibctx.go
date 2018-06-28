@@ -17,7 +17,7 @@ import (
 )
 
 // IBC transfer command
-func IBCTransferCmd(cdc *wire.Codec) *cobra.Command {
+func IBCSendTxCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "transfer",
 		RunE: func(cmd *cobra.Command, args []string) error {

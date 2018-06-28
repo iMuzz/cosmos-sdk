@@ -129,7 +129,7 @@ func (c Channel) Receipt(h ReceiptHandler, ctx sdk.Context, msg ReceiptMsg) sdk.
 	if err := msg.Verify(store, c); err != nil {
 		return err.Result()
 	}
-	setReceiptSequence(store, c.k.cdc, msg.Packet.SrcChain, msg.Proof.Sequence)
+	setIngressReceiptSequence(store, c.k.cdc, msg.Packet.SrcChain, msg.Proof.Sequence)
 
 	h(ctx, msg.Payload)
 

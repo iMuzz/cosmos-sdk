@@ -79,7 +79,7 @@ func (msg ReceiptMsg) GetSigners() []sdk.Address {
 func (msg ReceiptMsg) Verify(store sdk.KVStore, c Channel) sdk.Error {
 	chainID := msg.Packet.SrcChain
 
-	expected := getReceiptSequence(store, c.k.cdc, chainID)
+	expected := getIngressReceiptSequence(store, c.k.cdc, chainID)
 	proof := msg.Proof
 	if proof.Sequence != uint64(expected) {
 		return ErrInvalidSequence(c.k.codespace)
