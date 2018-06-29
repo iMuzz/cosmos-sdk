@@ -6,6 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+var _ sdk.CommitMultiStore = multiStore{}
+
 type multiStore struct {
 	kv map[sdk.StoreKey]kvStore
 }
@@ -34,7 +36,7 @@ func (ms multiStore) GetCommitStore(key sdk.StoreKey) sdk.CommitStore {
 	panic("not implemented")
 }
 
-func (ms multiStore) MountStoreWithDB(key sdk.StoreKey, typ sdk.StoreType, db dbm.DB) {
+func (ms multiStore) MountStoreWithDB(key sdk.StoreKey, typ sdk.StoreType, transient sdk.TransientUsage, db dbm.DB) {
 	ms.kv[key] = kvStore{store: make(map[string][]byte)}
 }
 
@@ -50,7 +52,7 @@ func (ms multiStore) GetKVStore(key sdk.StoreKey) sdk.KVStore {
 	return ms.kv[key]
 }
 
-func (ms multiStore) GetKVStoreWithGas(meter sdk.GasMeter, key sdk.StoreKey) sdk.KVStore {
+func (ms multiStore) GetKVStoreWithGas(meter sdk.GasMeter, config sdk.GasConfig, key sdk.StoreKey) sdk.KVStore {
 	panic("not implemented")
 }
 

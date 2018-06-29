@@ -102,18 +102,25 @@ func (app *BaseApp) RegisterCodespace(codespace sdk.CodespaceType) sdk.Codespace
 // Mount a store to the provided key in the BaseApp multistore
 func (app *BaseApp) MountStoresIAVL(keys ...*sdk.KVStoreKey) {
 	for _, key := range keys {
-		app.MountStore(key, sdk.StoreTypeIAVL)
+		app.MountStore(key, sdk.NoTransient, sdk.StoreTypeIAVL)
+	}
+}
+
+// Mount stores to the provided keys with transient support
+func (app *BaseApp) MountStoresIAVLUsingTransient(keys ...*sdk.KVStoreKey) {
+	for _, key := range keys {
+		app.MountStore(key, sdk.UsingTransient, sdk.StoreTypeIAVL)
 	}
 }
 
 // Mount a store to the provided key in the BaseApp multistore, using a specified DB
-func (app *BaseApp) MountStoreWithDB(key sdk.StoreKey, typ sdk.StoreType, db dbm.DB) {
-	app.cms.MountStoreWithDB(key, typ, db)
+func (app *BaseApp) MountStoreWithDB(key sdk.StoreKey, typ sdk.StoreType, transient sdk.TransientUsage, db dbm.DB) {
+	app.cms.MountStoreWithDB(key, typ, transient, db)
 }
 
 // Mount a store to the provided key in the BaseApp multistore, using the default DB
-func (app *BaseApp) MountStore(key sdk.StoreKey, typ sdk.StoreType) {
-	app.cms.MountStoreWithDB(key, typ, nil)
+func (app *BaseApp) MountStore(key sdk.StoreKey, transient sdk.TransientUsage, typ sdk.StoreType) {
+	app.cms.MountStoreWithDB(key, typ, transient, nil)
 }
 
 // Set the txDecoder function

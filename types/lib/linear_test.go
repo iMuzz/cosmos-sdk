@@ -24,7 +24,7 @@ type S struct {
 func defaultComponents(key sdk.StoreKey) (sdk.Context, *wire.Codec) {
 	db := dbm.NewMemDB()
 	cms := store.NewCommitMultiStore(db)
-	cms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
+	cms.MountStoreWithDB(key, sdk.StoreTypeIAVL, sdk.NoTransient, db)
 	cms.LoadLatestVersion()
 	ctx := sdk.NewContext(cms, abci.Header{}, false, log.NewNopLogger())
 	cdc := wire.NewCodec()

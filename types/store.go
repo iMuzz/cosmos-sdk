@@ -49,7 +49,7 @@ type MultiStore interface { //nolint
 	// Convenience for fetching substores.
 	GetStore(StoreKey) Store
 	GetKVStore(StoreKey) KVStore
-	GetKVStoreWithGas(GasMeter, StoreKey) KVStore
+	GetKVStoreWithGas(GasMeter, GasConfig, StoreKey) KVStore
 }
 
 // From MultiStore.CacheMultiStore()....
@@ -65,7 +65,7 @@ type CommitMultiStore interface {
 
 	// Mount a store of type using the given db.
 	// If db == nil, the new store will use the CommitMultiStore db.
-	MountStoreWithDB(key StoreKey, typ StoreType, db dbm.DB)
+	MountStoreWithDB(key StoreKey, typ StoreType, tran TransientUsage, db dbm.DB)
 
 	// Panics on a nil key.
 	GetCommitStore(key StoreKey) CommitStore
@@ -201,6 +201,18 @@ func (cid CommitID) String() string {
 	return fmt.Sprintf("CommitID{%v:%X}", cid.Hash, cid.Version)
 }
 
+//-------------------------------------
+// TransientStore usage
+
+// TransientUsage is true if the storekey is also using TransientStore
+type TransientUsage bool
+
+const (
+	//nolint
+	NoTransient    = false
+	UsingTransient = true
+)
+
 //----------------------------------------
 // Store types
 
@@ -213,6 +225,7 @@ const (
 	StoreTypeDB
 	StoreTypeIAVL
 	StoreTypePrefix
+	StoreTypeEmpty
 )
 
 //----------------------------------------
@@ -275,21 +288,6 @@ func PrefixEndBytes(prefix []byte) []byte {
 		}
 	}
 	return end
-}
-
-// Getter struct for prefixed stores
-type PrefixStoreGetter struct {
-	key    StoreKey
-	prefix []byte
-}
-
-func NewPrefixStoreGetter(key StoreKey, prefix []byte) PrefixStoreGetter {
-	return PrefixStoreGetter{key, prefix}
-}
-
-// Implements sdk.KVStoreGetter
-func (getter PrefixStoreGetter) KVStore(ctx Context) KVStore {
-	return ctx.KVStore(getter.key).Prefix(getter.prefix)
 }
 
 //----------------------------------------

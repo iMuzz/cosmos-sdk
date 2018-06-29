@@ -93,8 +93,8 @@ func CreateTestInput(t *testing.T, isCheckTx bool, initCoins int64) (sdk.Context
 
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
-	ms.MountStoreWithDB(keyStake, sdk.StoreTypeIAVL, db)
-	ms.MountStoreWithDB(keyAcc, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(keyStake, sdk.StoreTypeIAVL, sdk.NoTransient, db)
+	ms.MountStoreWithDB(keyAcc, sdk.StoreTypeIAVL, sdk.NoTransient, db)
 	err := ms.LoadLatestVersion()
 	require.Nil(t, err)
 

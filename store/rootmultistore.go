@@ -23,11 +23,12 @@ const (
 // other MultiStores.
 // Implements MultiStore.
 type rootMultiStore struct {
-	db           dbm.DB
-	lastCommitID CommitID
-	storesParams map[StoreKey]storeParams
-	stores       map[StoreKey]CommitStore
-	keysByName   map[string]StoreKey
+	db              dbm.DB
+	lastCommitID    CommitID
+	storesParams    map[StoreKey]storeParams
+	stores          map[StoreKey]CommitStore
+	transientStores map[StoreKey]transientStore
+	keysByName      map[string]StoreKey
 }
 
 var _ CommitMultiStore = (*rootMultiStore)(nil)
@@ -36,10 +37,11 @@ var _ Queryable = (*rootMultiStore)(nil)
 // nolint
 func NewCommitMultiStore(db dbm.DB) *rootMultiStore {
 	return &rootMultiStore{
-		db:           db,
-		storesParams: make(map[StoreKey]storeParams),
-		stores:       make(map[StoreKey]CommitStore),
-		keysByName:   make(map[string]StoreKey),
+		db:              db,
+		storesParams:    make(map[StoreKey]storeParams),
+		stores:          make(map[StoreKey]CommitStore),
+		transientStores: make(map[StoreKey]transientStore),
+		keysByName:      make(map[string]StoreKey),
 	}
 }
 
@@ -49,7 +51,7 @@ func (rs *rootMultiStore) GetStoreType() StoreType {
 }
 
 // Implements CommitMultiStore.
-func (rs *rootMultiStore) MountStoreWithDB(key StoreKey, typ StoreType, db dbm.DB) {
+func (rs *rootMultiStore) MountStoreWithDB(key StoreKey, typ StoreType, transient TransientUsage, db dbm.DB) {
 	if key == nil {
 		panic("MountIAVLStore() key cannot be nil")
 	}
@@ -57,9 +59,10 @@ func (rs *rootMultiStore) MountStoreWithDB(key StoreKey, typ StoreType, db dbm.D
 		panic(fmt.Sprintf("rootMultiStore duplicate store key %v", key))
 	}
 	rs.storesParams[key] = storeParams{
-		key: key,
-		typ: typ,
-		db:  db,
+		key:       key,
+		typ:       typ,
+		db:        db,
+		transient: transient,
 	}
 	rs.keysByName[key.Name()] = key
 }
@@ -92,6 +95,9 @@ func (rs *rootMultiStore) LoadVersion(ver int64) error {
 				return fmt.Errorf("failed to load rootMultiStore: %v", err)
 			}
 			rs.stores[key] = store
+			if storeParams.transient {
+				rs.transientStores[sdk.NewTransientStoreKey(key)] = newTransientStore()
+			}
 		}
 
 		rs.lastCommitID = CommitID{}
@@ -107,6 +113,7 @@ func (rs *rootMultiStore) LoadVersion(ver int64) error {
 
 	// Load each Store
 	var newStores = make(map[StoreKey]CommitStore)
+	var newTransientStores = make(map[StoreKey]transientStore)
 	for _, storeInfo := range cInfo.StoreInfos {
 		key, commitID := rs.nameToKey(storeInfo.Name), storeInfo.Core.CommitID
 		storeParams := rs.storesParams[key]
@@ -115,6 +122,9 @@ func (rs *rootMultiStore) LoadVersion(ver int64) error {
 			return fmt.Errorf("failed to load rootMultiStore: %v", err)
 		}
 		newStores[key] = store
+		if storeParams.transient {
+			newTransientStores[sdk.NewTransientStoreKey(key)] = newTransientStore()
+		}
 	}
 
 	// If any CommitStoreLoaders were not used, return error.
@@ -127,6 +137,7 @@ func (rs *rootMultiStore) LoadVersion(ver int64) error {
 	// Success.
 	rs.lastCommitID = cInfo.CommitID()
 	rs.stores = newStores
+	rs.transientStores = newTransientStores
 	return nil
 }
 
@@ -144,6 +155,9 @@ func (rs *rootMultiStore) Commit() CommitID {
 	// Commit stores.
 	version := rs.lastCommitID.Version + 1
 	commitInfo := commitStores(version, rs.stores)
+
+	// Clear transient stores.
+	clearTransientStores(rs.transientStores)
 
 	// Need to update atomically.
 	batch := rs.db.NewBatch()
@@ -175,17 +189,25 @@ func (rs *rootMultiStore) CacheMultiStore() CacheMultiStore {
 
 // Implements MultiStore.
 func (rs *rootMultiStore) GetStore(key StoreKey) Store {
+	tskey, ok := key.(sdk.TransientStoreKey)
+	if ok {
+		return rs.transientStores[tskey]
+	}
 	return rs.stores[key]
 }
 
 // Implements MultiStore.
 func (rs *rootMultiStore) GetKVStore(key StoreKey) KVStore {
+	tskey, ok := key.(sdk.TransientStoreKey)
+	if ok {
+		return rs.transientStores[tskey]
+	}
 	return rs.stores[key].(KVStore)
 }
 
 // Implements MultiStore.
-func (rs *rootMultiStore) GetKVStoreWithGas(meter sdk.GasMeter, key StoreKey) KVStore {
-	return NewGasKVStore(meter, rs.GetKVStore(key))
+func (rs *rootMultiStore) GetKVStoreWithGas(meter sdk.GasMeter, config sdk.GasConfig, key StoreKey) KVStore {
+	return NewGasKVStore(meter, config, rs.GetKVStore(key))
 }
 
 // getStoreByName will first convert the original name to
@@ -285,9 +307,10 @@ func (rs *rootMultiStore) nameToKey(name string) StoreKey {
 // storeParams
 
 type storeParams struct {
-	key StoreKey
-	db  dbm.DB
-	typ StoreType
+	key       StoreKey
+	db        dbm.DB
+	typ       StoreType
+	transient TransientUsage
 }
 
 //----------------------------------------
@@ -371,6 +394,12 @@ func getLatestVersion(db dbm.DB) int64 {
 func setLatestVersion(batch dbm.Batch, version int64) {
 	latestBytes, _ := cdc.MarshalBinary(version) // Does not error
 	batch.Set([]byte(latestVersionKey), latestBytes)
+}
+
+func clearTransientStores(storeMap map[StoreKey]transientStore) {
+	for key := range storeMap {
+		storeMap[key] = newTransientStore()
+	}
 }
 
 // Commits each store and returns a new commitInfo.

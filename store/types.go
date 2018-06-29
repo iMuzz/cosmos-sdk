@@ -20,6 +20,7 @@ type CommitKVStore = types.CommitKVStore
 type CacheWrapper = types.CacheWrapper
 type CacheWrap = types.CacheWrap
 type CommitID = types.CommitID
+type TransientUsage = types.TransientUsage
 type StoreKey = types.StoreKey
 type StoreType = types.StoreType
 type Queryable = types.Queryable
